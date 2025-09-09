@@ -87,3 +87,10 @@ terraform -chdir=${TF_WORKING_DIR} apply -auto-approve
 ![images](./documentation/github_action.png)
 
 - Notes: Sometimes it maybe have Error: remote-exec provisioner error. You can wait a short time and run workflow again
+
+### Grafana dashboard
+
+1. Access to http://{monitor_instance_public_ip}:3000
+2. Dashboard -> Todo App - OTel Metrics
+
+- Notes: After instance started, wait some minutes in order to Prometheus scrape metrics
