@@ -46,8 +46,6 @@ Reference: [Prometheus conventions](https://prometheus.io/docs/practices/naming)
 ```bash
 export DOCKER_USERNAME=""
 export DOCKER_PASSWORD=""
-export TF_VAR_DOCKER_USERNAME="$DOCKER_USERNAME"
-export TF_VAR_DOCKER_PASSWORD="$DOCKER_PASSWORD"
 
 # login Docker Hub
 docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
@@ -65,6 +63,12 @@ docker build -t "$DOCKER_USERNAME/loadgenerator:v1" ./loadgenerator
 docker push "$DOCKER_USERNAME/backend:v1"
 docker push "$DOCKER_USERNAME/frontend:v1"
 docker push "$DOCKER_USERNAME/loadgenerator:v1"
+
+export TF_WORKING_DIR="./terraform"
+export TF_VAR_DOCKER_USERNAME="$DOCKER_USERNAME"
+export TF_VAR_DOCKER_PASSWORD="$DOCKER_PASSWORD"
+terraform -chdir=${TF_WORKING_DIR} init
+terraform -chdir=${TF_WORKING_DIR} apply -auto-approve
 ```
 
 ### Use Github action
