@@ -1,0 +1,149 @@
+services:
+
+### APPLICATION PART
+
+  postgresdb:
+    image: ${POSTGRES_IMAGE}
+    container_name: postgresdb
+    networks:
+      - todonet
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=matthias
+      - POSTGRES_DB=mydb
+
+  todobackend-springboot:
+    image: ntthuan0106job/backend:v1
+    container_name: backend
+    networks:
+      - todonet
+    build:
+      context: ./todobackend-springboot
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+#      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318 # http endpoint
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=grpc
+      - OTEL_EXPORTER_OTLP_METRICS_PROTOCOL=grpc
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=todobackend-springboot
+      - OTEL_METRICS_EXPORTER=otlp,logging-otlp
+      - OTEL_LOGS_EXPORTER=none
+    depends_on:
+      - postgresdb
+
+  todoui-flask:
+    image: ntthuan0106job/frontend:v1
+    container_name: frontend
+    build:
+      context: ./todoui-flask
+    networks:
+      - todonet
+    ports:
+      - "5001:5000"
+    environment:
+      - BACKEND_URL=http://todobackend-springboot:8080/todos/
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=todoui-flask
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=grpc
+      - OTEL_EXPORTER_OTLP_METRICS_PROTOCOL=grpc
+
+  loadgenerator:
+    image: ntthuan0106job/loadgenerator:v1
+    container_name: loadgenerator
+    build:
+      context: ./loadgenerator
+    networks:
+      - todonet
+
+
+### OTEL PART
+
+  # jaegercol:
+  #   image: jaegertracing/all-in-one:latest
+  #   environment:
+  #     - COLLECTOR_OTLP_ENABLED=true
+  #   ports:
+  #     - "16686:16686"
+  #     - "4317:4317"
+
+  jaeger:
+    image: ${JAEGERTRACING_IMAGE}
+    container_name: jaeger
+    networks:
+      - todonet
+    command:
+      - "--memory.max-traces=5000"
+      - "--prometheus.server-url=http://prometheus:9090"
+      - "--prometheus.query.normalize-calls=true"
+      - "--prometheus.query.normalize-duration=true"
+ #      - "--query.base-path=/jaeger/ui"
+    ports:
+      - "16686:16686"
+    restart: unless-stopped
+    environment:
+      - METRICS_STORAGE_TYPE=prometheus
+
+  otelcol:
+    image: ${COLLECTOR_CONTRIB_IMAGE}
+    container_name: otelcol
+    restart: unless-stopped
+    networks:
+      - todonet
+    command: ["--config=/etc/otel-collector-config.yml", ""]
+    volumes:
+      - ./collector/otel-collector-config.yml:/etc/otel-collector-config.yml
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"
+    depends_on:
+      - jaeger
+
+  # Prometheus
+  prometheus:
+    container_name: prometheus
+    image: ${PROMETHEUS_IMAGE}
+    networks:
+      - todonet
+    command:
+      - --web.console.templates=/etc/prometheus/consoles
+      - --web.console.libraries=/etc/prometheus/console_libraries
+      - --storage.tsdb.retention.time=1h
+      - --config.file=/etc/prometheus/prometheus-config.yaml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+      - --web.route-prefix=/
+      - --enable-feature=exemplar-storage
+      - --enable-feature=otlp-write-receiver
+    volumes:
+      - ./prometheus/prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_SERVICE_PORT}:${PROMETHEUS_SERVICE_PORT}"
+
+  grafana:
+    container_name: grafana
+    image: ${GRAFANA_IMAGE}
+    volumes:
+      - ./grafana/grafana.yaml:/etc/grafana/grafana.ini
+      - ./grafana/datasource.yaml:/etc/grafana/provisioning/datasources/todoapp.yaml
+      - ./grafana/dashboard.yaml:/etc/grafana/provisioning/dashboards/dashboard.yaml
+      - ./grafana/dashboard.json:/var/lib/grafana/dashboards/dashboard.json
+    networks:
+    - todonet
+    restart: unless-stopped
+    ports:
+    - "${GRAFANA_SERVICE_PORT}:${GRAFANA_SERVICE_PORT}"
+    environment:
+    - GF_SECURITY_ADMIN_USER=admin
+    - GF_SECURITY_ADMIN_PASSWORD=admin
+
+networks:
+  todonet:

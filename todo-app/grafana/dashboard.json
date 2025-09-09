@@ -1,0 +1,202 @@
+{
+    "id": null,
+    "title": "Todo App - OTel Metrics",
+    "tags": [
+        "opentelemetry",
+        "todoapp"
+    ],
+    "timezone": "browser",
+    "time": {
+        "from": "now-15m",
+        "to": "now"
+    },
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "10s",
+    "panels": [
+        {
+            "type": "stat",
+            "title": "P50",
+            "id": 1,
+            "gridPos": {
+                "x": 0,
+                "y": 0,
+                "w": 8,
+                "h": 8
+            },
+            "datasource": {
+                "type": "todoapp",
+                "uid": "PROM_DS"
+            },
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.5, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, job))",
+                    "legendFormat": "p50",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s"
+                }
+            }
+        },
+        {
+            "type": "stat",
+            "title": "P90",
+            "id": 2,
+            "gridPos": {
+                "x": 8,
+                "y": 0,
+                "w": 8,
+                "h": 8
+            },
+            "datasource": {
+                "type": "todoapp",
+                "uid": "PROM_DS"
+            },
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.9, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, job))",
+                    "legendFormat": "p90",
+                    "refId": "B"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s"
+                }
+            }
+        },
+        {
+            "type": "stat",
+            "title": "Latency P99",
+            "id": 3,
+            "gridPos": {
+                "x": 16,
+                "y": 0,
+                "w": 8,
+                "h": 8
+            },
+            "datasource": {
+                "type": "todoapp",
+                "uid": "PROM_DS"
+            },
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.99, sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le,job))",
+                    "legendFormat": "p99",
+                    "refId": "C"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s"
+                }
+            }
+        },
+        {
+            "type": "stat",
+            "title": "Requests total",
+            "id": 4,
+            "gridPos": {
+                "x": 0,
+                "y": 1,
+                "w": 24,
+                "h": 8
+            },
+            "datasource": {
+                "type": "todoapp",
+                "uid": "PROM_DS"
+            },
+            "targets": [
+                {
+                    "expr": "index_called_request_total",
+                    "legendFormat": "index total",
+                    "refId": "A"
+                },
+                {
+                    "expr": "add_called_request_total",
+                    "legendFormat": "add total",
+                    "refId": "B"
+                },
+                {
+                    "expr": "delete_called_request_total",
+                    "legendFormat": "delete total",
+                    "refId": "C"
+                }
+            ]
+        },
+        {
+            "type": "timeseries",
+            "title": "Error Requests",
+            "id": 5,
+            "gridPos": {
+                "x": 0,
+                "y": 2,
+                "w": 24,
+                "h": 8
+            },
+            "datasource": {
+                "type": "todoapp",
+                "uid": "PROM_DS"
+            },
+            "targets": [
+                {
+                    "expr": "error_rate_request_total",
+                    "legendFormat": "{{http_route}}",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "type": "timeseries",
+            "title": "Request Latency",
+            "id": 6,
+            "gridPos": {
+                "x": 0,
+                "y": 3,
+                "w": 24,
+                "h": 8
+            },
+            "datasource": {
+                "type": "todoapp",
+                "uid": "PROM_DS"
+            },
+            "targets": [
+                {
+                    "expr": "http_server_request_duration_seconds_sum",
+                    "legendFormat": "avg latency (s)",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s"
+                }
+            }
+        }
+    ],
+    "timepicker": {
+        "collapse": false,
+        "enable": true,
+        "notice": false,
+        "now": true,
+        "hidden": false,
+        "nowDelay": "",
+        "refresh_intervals": [
+            "5s",
+            "10s",
+            "30s",
+            "1m",
+            "5m",
+            "15m",
+            "30m",
+            "1h",
+            "2h",
+            "1d"
+        ],
+        "status": "Stable",
+        "type": "timepicker"
+    }
+}
