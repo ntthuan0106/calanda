@@ -94,3 +94,40 @@ terraform -chdir=${TF_WORKING_DIR} apply -auto-approve
 2. Dashboard -> Todo App - OTel Metrics
 
 - Notes: After instance started, wait some minutes in order to Prometheus scrape metrics
+
+## Assumptions, Limitations, and Tradeoffs
+
+### Assumptions
+
+- Application-level latency is sufficient to demonstrate the assignment requirements.
+- Docker images are built and pushed to Docker Hub successfully before Terraform provisioning.
+
+### Limitations
+
+- Latency reflects application-perceived latency rather than pure network latency.
+- Prometheus and Grafana run as single instances without high availability.
+- The load generator produces basic traffic and does not simulate real-world usage patterns.
+
+### Tradeoffs
+
+- Chose OTel instrumentation inside the app instead of raw ping measurements to leverage the existing observability stack.
+- Accepted that adding custom application metrics (counters, histograms, error tracking) can slightly increase overhead and latency when exporting to the OTel Collector. The tradeoff is better observability and more detailed insights at the cost of a small performance impact.
+
+## Latency Insights
+
+### Sources of latency
+
+- Latency is measured at the application level through HTTP requests, so it reflects both network delay and processing time in the app (Flask, Spring Boot).
+
+- Occasional spikes were observed when frontend, backend services were under load (e.g., garbage collection, warm-up), even though the underlying network remained stable
+
+### Improving precision or consistency
+
+- In a more advanced setup, separating raw network latency (e.g., ICMP/TCP probes) from application-level latency would provide clearer insights.
+- Adjusting Prometheus scrape intervals and OTel sampling could improve resolution of short-lived latency fluctuations.
+
+### Production considerations
+
+- Would add synthetic probes (e.g., blackbox_exporter) to differentiate between application latency and raw network latency.
+- Use distributed tracing (via OpenTelemetry) to attribute delays across backend, frontend, and DB layers.
+- Introduce autoscaling policies for spikes in workload to prevent resource saturation.
