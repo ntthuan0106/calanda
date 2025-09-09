@@ -1,0 +1,72 @@
+services:
+
+  ### APPLICATION PART
+
+  postgresdb:
+    container_name: postgresdb
+    image: ${POSTGRES_IMAGE}
+    networks:
+    - todonet
+    ports:
+    - 5432:5432
+    environment:
+    - POSTGRES_PASSWORD=password
+    - POSTGRES_USER=matthias
+    - POSTGRES_DB=mydb
+
+  todobackend-springboot:
+    image: ntthuan0106job/backend:v1
+    container_name: backend
+    networks:
+    - todonet
+    ports:
+    - "8080:8080"
+    restart: unless-stopped
+    environment:
+    - SPRING_PROFILES_ACTIVE=prod
+    - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+    - OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+    - OTEL_EXPORTER_OTLP_TRACES_PROTOCOL=grpc
+    - OTEL_EXPORTER_OTLP_METRICS_PROTOCOL=grpc
+    - OTEL_RESOURCE_ATTRIBUTES=service.name=todobackend-springboot
+    - OTEL_METRICS_EXPORTER=otlp,logging-otlp
+    - OTEL_LOGS_EXPORTER=none
+    depends_on:
+    - postgresdb
+
+  todoui-flask:
+    image: ntthuan0106job/frontend:v1
+    container_name: frontend
+    networks:
+    - todonet
+    ports:
+    - "5001:5000"
+    environment:
+    - BACKEND_URL=http://todobackend-springboot:8080/todos/
+    - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+    - OTEL_RESOURCE_ATTRIBUTES=service.name=todoui-flask
+    - OTEL_METRICS_EXPORTER=otlp
+
+  otelcol:
+    image: ${COLLECTOR_CONTRIB_IMAGE}
+    container_name: otelcol
+    restart: unless-stopped
+    networks:
+    - todonet
+    command: [ "--config=/etc/otel-collector-config.yml", "" ]
+    volumes:
+    - ./otel-collector-config.yml:/etc/otel-collector-config.yml
+    ports:
+    - "4317:4317" # OTLP gRPC receiver
+    - "4318:4318"
+    environment:
+    - MONITOR_INSTANCE_PRIVATE_IP=${MONITOR_INSTANCE_PRIVATE_IP}
+
+  loadgenerator:
+    image: ntthuan0106job/loadgenerator:v1
+    container_name: loadgenerator
+    networks:
+      - todonet
+
+networks:
+  todonet:

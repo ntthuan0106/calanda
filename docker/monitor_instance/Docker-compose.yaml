@@ -1,0 +1,43 @@
+services:
+  prometheus:
+    container_name: prometheus
+    image: ${PROMETHEUS_IMAGE}
+    networks:
+    - todonet
+    command:
+    - --web.console.templates=/etc/prometheus/consoles
+    - --web.console.libraries=/etc/prometheus/console_libraries
+    - --storage.tsdb.retention.time=1h
+    - --config.file=/etc/prometheus/prometheus-config.yaml
+    - --storage.tsdb.path=/prometheus
+    - --web.enable-lifecycle
+    - --web.route-prefix=/
+    - --enable-feature=exemplar-storage
+    - --enable-feature=otlp-write-receiver
+    volumes:
+    - ./prometheus-config.yaml:/etc/prometheus/prometheus-config.yaml
+    restart: unless-stopped
+    ports:
+    - "${PROMETHEUS_SERVICE_PORT}:${PROMETHEUS_SERVICE_PORT}"
+    environment:
+    - MONITOR_INSTANCE_PRIVATE_IP=${MONITOR_INSTANCE_PRIVATE_IP}
+
+  grafana:
+    container_name: grafana
+    image: ${GRAFANA_IMAGE}
+    volumes:
+      - ./grafana.yaml:/etc/grafana/grafana.ini
+      - ./datasource.yaml:/etc/grafana/provisioning/datasources/todoapp.yaml
+      - ./dashboard.yaml:/etc/grafana/provisioning/dashboards/dashboard.yaml
+      - ./dashboard.json:/var/lib/grafana/dashboards/dashboard.json
+    networks:
+    - todonet
+    restart: unless-stopped
+    ports:
+    - "${GRAFANA_SERVICE_PORT}:${GRAFANA_SERVICE_PORT}"
+    environment:
+    - GF_SECURITY_ADMIN_USER=admin
+    - GF_SECURITY_ADMIN_PASSWORD=admin
+
+networks:
+  todonet:
