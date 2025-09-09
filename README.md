@@ -41,7 +41,7 @@ Reference: [Prometheus conventions](https://prometheus.io/docs/practices/naming)
 
 ## Guideline
 
-### Build and  push images to Dockerhub
+### Manual deploy
 
 ```bash
 export DOCKER_USERNAME=""
@@ -71,7 +71,7 @@ terraform -chdir=${TF_WORKING_DIR} init
 terraform -chdir=${TF_WORKING_DIR} apply -auto-approve
 ```
 
-### Use Github action
+### Automate deploy by using Github action
 
 1. Create secret variables
 
